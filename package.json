@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "AQP Order Management System – Backend (NestJS + Prisma + PostgreSQL + Socket.IO)",
   "scripts": {
-    "build": "prisma generate && nest build",
+    "build": "npx prisma generate && npx nest build",
     "start": "node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
