@@ -4,8 +4,8 @@ services:
     runtime: node
     region: ohio
     plan: free
-    buildCommand: npm install --include=dev && npm run build
-    startCommand: npm run start
+    buildCommand: npm install --include=dev && npx prisma generate && npx nest build
+    startCommand: node dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
