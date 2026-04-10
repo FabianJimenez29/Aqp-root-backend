@@ -1,0 +1,152 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Prisma Schema – AQP Order Management System
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN      // Full access: manages users, projects, products
+  WAREHOUSE  // Processes orders; marks items as prepared
+  PROJECT    // Creates orders for a given project
+  DRIVER     // Delivery drivers – carry orders to project sites
+}
+
+enum OrderStatus {
+  PENDING     // Just created, awaiting warehouse action
+  IN_PROGRESS // Warehouse started processing
+  COMPLETED   // All items prepared and order dispatched
+}
+
+enum ItemStatus {
+  PENDING  // Not yet prepared
+  PREPARED // Item has been picked and prepared by warehouse
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // bcrypt hashed
+  role      Role     @default(PROJECT)
+  pushToken String?  // Expo Push Token – stored after device registration
+  signature String?  // Base64 PNG signature – used in delivery confirmation PDF
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+  preparedOrders  Order[] @relation("PreparedOrders")
+  completedOrders Order[] @relation("CompletedOrders")
+  drivenOrders    Order[] @relation("DrivenOrders")
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      Order[]
+
+  @@map("projects")
+}
+
+model Product {
+  id         String   @id @default(uuid())
+  code       String   @unique  // Unique product code (from CSV)
+  name       String
+  category   String
+  createdAt  DateTime @default(now())
+
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber Int         @default(autoincrement())
+  status      OrderStatus @default(PENDING)
+  notes       String?     // Optional notes, e.g., for pending items
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+
+  // Tracking: who prepared, who completed, and who drove the delivery
+  preparedById String?
+  preparedBy   User?   @relation(name: "PreparedOrders", fields: [preparedById], references: [id])
+
+  completedById String?
+  completedBy   User?   @relation(name: "CompletedOrders", fields: [completedById], references: [id])
+
+  driverId String?
+  driver   User?   @relation(name: "DrivenOrders", fields: [driverId], references: [id])
+
+  orderItems OrderItem[]
+  history    OrderHistory[]
+  photos     OrderPhoto[]
+
+  @@map("orders")
+}
+
+model OrderHistory {
+  id              String   @id @default(uuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId          String
+  userName        String   // Denormalized for display even if user is deleted
+  action          String   // 'ENVIO' | 'ENVIO_CON_PENDIENTES' | 'ALISTO_PENDIENTES'
+  // Snapshot del conductor en el momento del envío (solo aplica a ENVIO / ENVIO_CON_PENDIENTES)
+  driverId        String?
+  driverName      String?
+  driverSignature String?
+  createdAt       DateTime @default(now())
+
+  @@map("order_history")
+}
+
+model OrderItem {
+  id       String     @id @default(uuid())
+  quantity Int
+  status   ItemStatus @default(PENDING)
+
+  // Relations
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderPhoto {
+  id        String   @id @default(uuid())
+  dataUrl   String   // Base64 data URL of the photo
+  caption   String?  // Optional caption
+  createdAt DateTime @default(now())
+
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_photos")
+}
