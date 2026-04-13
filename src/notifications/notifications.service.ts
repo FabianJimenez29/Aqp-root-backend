@@ -8,6 +8,11 @@
  * To send FCM directly in the future, replace the fetch call with firebase-admin.
  */
 import { Injectable, Logger } from '@nestjs/common';
+import * as https from 'https';
+
+// Agente HTTPS con keep-alive para reusar conexiones TCP hacia Expo Push API
+// Evita el overhead de TLS handshake en cada notificación (~100-300ms)
+const keepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 10 });
 
 interface ExpoPushMessage {
   to: string;
@@ -75,6 +80,8 @@ export class NotificationsService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(chunk),
+          // @ts-ignore — Node 18+ fetch acepta agent para reusar conexiones
+          agent: keepAliveAgent,
         });
 
         const result = await response.json() as { data: ExpoPushTicket[] };

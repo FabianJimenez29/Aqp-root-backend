@@ -34,6 +34,11 @@ async function bootstrap() {
   // Replaces the default adapter with Socket.IO to support real-time events
   app.useWebSocketAdapter(new IoAdapter(app));
 
+  // ─── Health check ───────────────────────────────────────────────────────
+  // Simple GET /health endpoint para keep-alive (UptimeRobot, etc.)
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.get('/health', (_req: any, res: any) => res.json({ status: 'ok' }));
+
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 

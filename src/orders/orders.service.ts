@@ -22,8 +22,8 @@ interface AuthUser {
 const ORDER_INCLUDE = {
   project: true,
   user: { select: { id: true, name: true, email: true, role: true } },
-  preparedBy: { select: { id: true, name: true, email: true } },
-  completedBy: { select: { id: true, name: true, email: true } },
+  preparedBy: { select: { id: true, name: true, email: true, signature: true } },
+  completedBy: { select: { id: true, name: true, email: true, signature: true } },
   driver: { select: { id: true, name: true, email: true, signature: true } },
   orderItems: {
     include: {
@@ -80,7 +80,9 @@ export class OrdersService {
           })),
         },
       },
-      include: ORDER_INCLUDE,
+      // ORDER_LIST_INCLUDE omite fotos y firmas (base64 pesado) — crea la orden
+      // más rápido y permite que el WebSocket y la push disparen antes.
+      include: ORDER_LIST_INCLUDE,
     });
 
     // ── Real-time: notify all warehouse clients about the new order ──
