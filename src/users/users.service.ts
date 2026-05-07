@@ -82,7 +82,8 @@ export class UsersService {
       },
       select: { pushToken: true },
     });
-    return users.map((u) => u.pushToken!);
+    const tokens = users.map((u) => u.pushToken!);
+    return [...new Set(tokens)];
   }
 
   async findDrivers() {
